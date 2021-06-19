@@ -1,3 +1,5 @@
+
+
 # 01 - Get Started with Notebooks.ipynb
 
 - Easiest way to connect to a workspace
