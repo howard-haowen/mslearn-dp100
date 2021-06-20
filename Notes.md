@@ -1,7 +1,9 @@
 # Table of Contents
-- [01 - Get Started with Notebooks.ipynb](#01)
-- [02 - Get AutoML Prediction.ipynb](#02)
-
+- [01 - Get Started with Notebooks.ipynb](#heading01)
+- [02 - Get AutoML Prediction.ipynb](#heading02)
+- [03 - Get Designer Prediction.ipynb](#heading03)
+- []
+- 
 # 01 - Get Started with Notebooks.ipynb
 
 - Easiest way to connect to a workspace
