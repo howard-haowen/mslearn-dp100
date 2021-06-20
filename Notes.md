@@ -5,7 +5,10 @@
 - [04 - Run Experiments](#04---run-experiments)
 - [05 - Train Models](#05---train-models)
 - [06 - Work with Data](#06---work-with-data)
-
+- [07 - Work with Compute](#07---work-with-compute)
+- [08 - Create a Pipeline](#08---create-a-pipeline)
+- [09 - Create a Real-time Inferencing Service](#09---create-a-realtime-inferencing-service)
+ 
 # 01 - Get Started with Notebooks
 
 ## Easiest way to connect to a workspace
@@ -246,3 +249,159 @@ script_config = ScriptRunConfig(source_directory=experiment_folder,
 ```
 - Using `as_download` causes the files in the file dataset to be downloaded to a temporary location on the compute where the script is being run, while `as_mount` creates a mount point from which the files can be streamed directly from the datasetore.
 
+# 07 - Work with Compute
+## Create a compute cluster
+```python
+from azureml.core.compute import ComputeTarget, AmlCompute
+from azureml.core.compute_target import ComputeTargetException
+
+cluster_name = "your-compute-cluster"
+
+try:
+    # Check for existing compute target
+    training_cluster = ComputeTarget(workspace=ws, name=cluster_name)
+    print('Found existing cluster, use it.')
+except ComputeTargetException:
+    # If it doesn't already exist, create it
+    try:
+        compute_config = AmlCompute.provisioning_configuration(vm_size='STANDARD_DS11_V2', max_nodes=2)
+        training_cluster = ComputeTarget.create(ws, cluster_name, compute_config)
+        training_cluster.wait_for_completion(show_output=True)
+    except Exception as ex:
+        print(ex)
+```
+
+- Assign the created compute cluster to a script config
+```python
+# Create a script config
+script_config = ScriptRunConfig(source_directory=experiment_folder,
+                                script='diabetes_training.py',
+                                arguments = ['--input-data', diabetes_ds.as_named_input('training_data')],
+                                environment=registered_env,
+                                compute_target=cluster_name) 
+```
+
+# 08 - Create a Pipeline
+## Create a script for Step 1
+- Input data for Step 1
+```python
+parser.add_argument("--input-data", type=str, dest='raw_dataset_id', help='raw dataset')
+
+diabetes = run.input_datasets['raw_data'].to_pandas_dataframe()
+```
+- Output data for Step 1
+```python
+parser.add_argument('--prepped-data', type=str, dest='prepped_data', default='prepped_data', help='Folder for results')
+
+save_folder = args.prepped_data
+
+# Save the prepped data
+print("Saving Data...")
+os.makedirs(save_folder, exist_ok=True)
+save_path = os.path.join(save_folder,'data.csv')
+diabetes.to_csv(save_path, index=False, header=True)
+```
+
+## Create a script for Step 2
+```python
+parser.add_argument("--training-data", type=str, dest='training_data', help='training data')
+args = parser.parse_args()
+training_data = args.training_data
+```
+
+## Create two `PythonScriptStep` instances for Step 1 and 2
+```python
+from azureml.data import OutputFileDatasetConfig
+from azureml.pipeline.steps import PythonScriptStep
+
+# Get the training dataset
+diabetes_ds = ws.datasets.get("diabetes dataset")
+
+# Create an OutputFileDatasetConfig (temporary Data Reference) for data passed from step 1 to step 2
+prepped_data = OutputFileDatasetConfig("prepped_data")
+
+# Step 1, Run the data prep script
+prep_step = PythonScriptStep(name = "Prepare Data",
+                                source_directory = experiment_folder,
+                                script_name = "prep_diabetes.py",
+                                arguments = ['--input-data', diabetes_ds.as_named_input('raw_data'),
+                                             '--prepped-data', prepped_data],
+                                compute_target = pipeline_cluster,
+                                runconfig = pipeline_run_config,
+                                allow_reuse = True)
+
+# Step 2, run the training script
+train_step = PythonScriptStep(name = "Train and Register Model",
+                                source_directory = experiment_folder,
+                                script_name = "train_diabetes.py",
+                                arguments = ['--training-data', prepped_data.as_input()],
+                                compute_target = pipeline_cluster,
+                                runconfig = pipeline_run_config,
+                                allow_reuse = True)
+```
+
+- Use `OutputFileDatasetConfig()` for the output of Step 1, which is passed along to Step 2 by `prepped_data.as_input()`
+
+## Create the pipeline connecting Step 1 and 2
+```python
+from azureml.pipeline.core import Pipeline
+
+# Construct the pipeline
+pipeline_steps = [prep_step, train_step]
+pipeline = Pipeline(workspace=ws, steps=pipeline_steps)
+
+# Create an experiment and run the pipeline
+experiment = Experiment(workspace=ws, name = 'mslearn-diabetes-pipeline')
+pipeline_run = experiment.submit(pipeline, regenerate_outputs=True)
+```
+
+## Publish the pipeline and get its endpoint
+```python
+published_pipeline = pipeline_run.publish_pipeline(
+    name="diabetes-training-pipeline", description="Trains diabetes model", version="1.0")
+    
+rest_endpoint = published_pipeline.endpoint
+```
+
+## Call the pipeline endpoint
+### Get authentication
+```python
+from azureml.core.authentication import InteractiveLoginAuthentication
+
+interactive_auth = InteractiveLoginAuthentication()
+auth_header = interactive_auth.get_authentication_header()
+```
+### Make a post request to the run_id
+```python
+import requests
+
+experiment_name = 'mslearn-diabetes-pipeline'
+rest_endpoint = published_pipeline.endpoint
+response = requests.post(rest_endpoint, 
+                         headers=auth_header, 
+                         json={"ExperimentName": experiment_name})
+run_id = response.json()["Id"]
+```
+
+## Start a pipeline run with a run_id
+```python
+from azureml.pipeline.core.run import PipelineRun
+
+published_pipeline_run = PipelineRun(ws.experiments[experiment_name], run_id)
+published_pipeline_run.wait_for_completion(show_output=True)
+```
+
+## Schedule a pipeline run
+```python
+from azureml.pipeline.core import ScheduleRecurrence, Schedule
+
+# Submit the Pipeline every Monday at 00:00 UTC
+recurrence = ScheduleRecurrence(frequency="Week", interval=1, week_days=["Monday"], time_of_day="00:00")
+weekly_schedule = Schedule.create(ws, name="weekly-diabetes-training", 
+                                  description="Based on time",
+                                  pipeline_id=published_pipeline.id, 
+                                  experiment_name='mslearn-diabetes-pipeline', 
+                                  recurrence=recurrence)                             
+```
+
+# 09 - Create a Real-time Inferencing Service
