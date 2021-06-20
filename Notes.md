@@ -9,7 +9,10 @@
 - [08 - Create a Pipeline](#08---create-a-pipeline)
 - [09 - Create a Real-time Inferencing Service](#09---create-a-real-time-inferencing-service)
 - [10 - Create a Batch Inferencing Service](#10---create-a-batch-inferencing-service)
-  
+- [11 - Tune Hyperparameters](#11---tune-hyperparameters)
+- [12 - Use Automated Machine Learning](#12---use-automated-machine-learning)
+- [13 - Explore Differential Privacy](#13---explore-differential-privacy)
+-   
 # 01 - Get Started with Notebooks
 
 ## Easiest way to connect to a workspace
@@ -361,7 +364,7 @@ train_step = PythonScriptStep(name = "Train and Register Model",
 
 - Use `OutputFileDatasetConfig()` for the output of Step 1, which is passed along to Step 2 by `prepped_data.as_input()`
 
-## Create the pipeline connecting Step 1 and 2
+## Create a pipeline connecting Step 1 and 2
 ```python
 from azureml.pipeline.core import Pipeline
 
@@ -521,7 +524,7 @@ for i in range(len(x_new)):
 
 # 10 - Create a Batch Inferencing Service
 ## Create a scoring/entry script 
-- The difference between scoring scripts for a real-time service and those for a batch inference service lies mostly in the `run()` function.
+- The difference between scoring scripts for a real-time service and those for a batch inferencing service lies mostly in the `run()` function.
 
 ```python
 import os
@@ -553,4 +556,189 @@ def run(mini_batch):
     return resultList
 
 ```
+## Create a PipelineData as the output folder for batch inferencing
+```python
+from azureml.pipeline.core import PipelineData
 
+output_dir = PipelineData(name='inferences', 
+                          datastore=default_ds, 
+                          output_path_on_compute='diabetes/results')
+```
+
+## Create a ParallelRunStep 
+```python
+from azureml.pipeline.steps import ParallelRunConfig, ParallelRunStep
+
+parallel_run_config = ParallelRunConfig(
+    source_directory=experiment_folder,
+    entry_script="batch_diabetes.py",
+    mini_batch_size="5",
+    error_threshold=10,
+    output_action="append_row",
+    environment=batch_env,
+    compute_target=inference_cluster,
+    node_count=2)
+
+parallelrun_step = ParallelRunStep(
+    name='batch-score-diabetes',
+    parallel_run_config=parallel_run_config,
+    inputs=[batch_data_set.as_named_input('diabetes_batch')],
+    output=output_dir,
+    arguments=[],
+    allow_reuse=True
+)
+```
+## Submit `parallelrun_step` to an experiment
+```python
+from azureml.core import Experiment
+from azureml.pipeline.core import Pipeline
+
+pipeline = Pipeline(workspace=ws, steps=[parallelrun_step])
+pipeline_run = Experiment(ws, 'mslearn-diabetes-batch').submit(pipeline)
+pipeline_run.wait_for_completion(show_output=True)
+```
+
+## Get predictions from `pipeline_run`
+```python
+# Get the run for the first step and download its output
+prediction_run = next(pipeline_run.get_children())
+prediction_output = prediction_run.get_output_data('inferences')
+```
+
+# 11 - Tune Hyperparameters
+## Sample a range of parameter values
+```python
+from azureml.train.hyperdrive import GridParameterSampling, HyperDriveConfig, PrimaryMetricGoal, choice
+
+params = GridParameterSampling(
+    {
+        # Hyperdrive will try 6 combinations, adding these as script arguments
+        '--learning_rate': choice(0.01, 0.1, 1.0),
+        '--n_estimators' : choice(10, 100)
+    }
+)
+```
+## Configure hyperdrive settings
+```python
+hyperdrive = HyperDriveConfig(run_config=script_config, 
+                          hyperparameter_sampling=params, 
+                          policy=None, # No early stopping policy
+                          primary_metric_name='AUC', # Find the highest AUC metric
+                          primary_metric_goal=PrimaryMetricGoal.MAXIMIZE, 
+                          max_total_runs=6, # Restict the experiment to 6 iterations
+                          max_concurrent_runs=2) # Run up to 2 iterations in parallel
+```
+## Submit `hyperdrive` to an experiment
+```python
+# Run the experiment
+experiment = Experiment(workspace=ws, name='mslearn-diabetes-hyperdrive')
+run = experiment.submit(config=hyperdrive)
+```
+
+## Get the best performing run by the primary metric
+```python
+# Get the best run, and its metrics and arguments
+best_run = run.get_best_run_by_primary_metric()
+best_run_metrics = best_run.get_metrics()
+script_arguments = best_run.get_details() ['runDefinition']['arguments']
+print('Best Run Id: ', best_run.id)
+print(' -AUC:', best_run_metrics['AUC'])
+print(' -Accuracy:', best_run_metrics['Accuracy'])
+print(' -Arguments:',script_arguments)
+```
+
+# 12 - Use Automated Machine Learning
+```python
+from azureml.train.automl import AutoMLConfig
+
+automl_config = AutoMLConfig(name='Automated ML Experiment',
+                             task='classification',
+                             compute_target=training_cluster,
+                             training_data = train_ds,
+                             validation_data = test_ds,
+                             label_column_name='Diabetic',
+                             iterations=4,
+                             primary_metric = 'AUC_weighted',
+                             max_concurrent_iterations=2,
+                             featurization='auto'
+                             )
+```
+
+# 13 - Explore Differential Privacy
+- Epsilon: A low epsilon results in a dataset with a greater level of privacy, while a high epsilon results in a dataset that is closer to the original data. 
+
+## Create a `smartnonise` analysis for means
+```python
+import opendp.smartnoise.core as sn
+
+cols = list(diabetes.columns)
+age_range = [0.0, 120.0]
+samples = len(diabetes)
+
+with sn.Analysis() as analysis:
+    # load data
+    data = sn.Dataset(path=data_path, column_names=cols)
+    
+    # Convert Age to float
+    age_dt = sn.to_float(data['Age'])
+    
+    # get mean of age
+    age_mean = sn.dp_mean(data = age_dt,
+                          privacy_usage = {'epsilon': .50},
+                          data_lower = age_range[0],
+                          data_upper = age_range[1],
+                          data_rows = samples
+                         )
+    
+analysis.release()
+
+# print differentially private estimate of mean age
+print("Private mean age:",age_mean.value)
+
+# print actual mean age
+print("Actual mean age:",diabetes.Age.mean())
+```
+## Create a `smartnoise` analysis for covariance
+```python
+with sn.Analysis() as analysis:
+    sn_data = sn.Dataset(path = data_path, column_names = cols)
+
+    age_bp_cov_scalar = sn.dp_covariance(
+                left = sn.to_float(sn_data['Age']),
+                right = sn.to_float(sn_data['DiastolicBloodPressure']),
+                privacy_usage = {'epsilon': 1.0},
+                left_lower = 0.,
+                left_upper = 120.,
+                left_rows = 10000,
+                right_lower = 0.,
+                right_upper = 150.,
+                right_rows = 10000)
+analysis.release()
+print('Differentially private covariance: {0}'.format(age_bp_cov_scalar.value[0][0]))
+print('Actual covariance', diabetes.Age.cov(diabetes.DiastolicBloodPressure))
+```
+## Use SQL queries
+### Create a .yml file for data schema
+```python
+from opendp.smartnoise.metadata import CollectionMetadata
+
+meta = CollectionMetadata.from_file('metadata/diabetes.yml')
+```
+
+### `PandasReader` without differential privacy vs `PrivateReader` with differential privacy
+```python
+from opendp.smartnoise.sql import PandasReader, PrivateReader
+
+reader = PandasReader(diabetes, meta)
+private_reader = PrivateReader(reader=reader, metadata=meta, epsilon_per_column=0.7)
+```
+
+### Submit a SQL query
+```python
+query = 'SELECT Diabetic, AVG(Age) AS AvgAge FROM diabetes.diabetes GROUP BY Diabetic'
+
+# Query with differential privacy
+result_dp = private_reader.execute(query)
+# Query without differential privacy
+result = reader.execute(query)
+```
