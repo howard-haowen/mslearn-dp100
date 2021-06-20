@@ -1,10 +1,10 @@
 # Table of Contents
-- [01 - Get Started with Notebooks.ipynb](#heading01)
-- [02 - Get AutoML Prediction.ipynb](#heading02)
-- [03 - Get Designer Prediction.ipynb](#heading03)
-- []
+- [01 - Get Started with Notebooks](#01---get-started-with-notebooks)
+- [02 - Get AutoML Prediction](#02---get-autoML-prediction)
+- [03 - Get Designer Prediction](#03---get-designer-prediction)
+- [04 - Run Experiments](#04---run-experiments)
 - 
-# 01 - Get Started with Notebooks.ipynb
+# 01 - Get Started with Notebooks
 
 - Easiest way to connect to a workspace
 ```python
@@ -13,7 +13,7 @@ from azureml.core import Workspace
 ws = Workspace.from_config()
 ```
 
-# 02 - Get AutoML Prediction.ipynb
+# 02 - Get AutoML Prediction
 
 - Use `requests` to get predictions from an AutoML endpoint
 ```python
@@ -42,7 +42,7 @@ headers = {"Content-Type":"application/json",
 response = requests.post(endpoint, input_json, headers=headers)
 ```
 
-# 03 - Get Designer Prediction.ipynb
+# 03 - Get Designer Prediction
 - Use `urllib` to get predictions from a Designer Pipeline
 ```python
 import urllib.request
@@ -78,7 +78,7 @@ headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ key)}
 req = urllib.request.Request(endpoint, body, headers)
 ```
 
-# 04 - Run Experiments.ipynb
+# 04 - Run Experiments
 - To start logging in an experiment run
 ```python
 from azureml.core import Experiment
