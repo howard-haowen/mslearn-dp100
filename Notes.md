@@ -1,4 +1,6 @@
-
+# Table of Contents
+- [01 - Get Started with Notebooks.ipynb](#01)
+- [02 - Get AutoML Prediction.ipynb](#02)
 
 # 01 - Get Started with Notebooks.ipynb
 
