@@ -667,7 +667,7 @@ automl_config = AutoMLConfig(name='Automated ML Experiment',
 # 13 - Explore Differential Privacy
 - Epsilon: A low epsilon results in a dataset with a greater level of privacy, while a high epsilon results in a dataset that is closer to the original data. 
 
-## Create a `smartnonise` analysis for means
+## Create a `smartnoise` analysis for means
 ```python
 import opendp.smartnoise.core as sn
 
