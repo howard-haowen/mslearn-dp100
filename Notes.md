@@ -492,7 +492,7 @@ for i in range(len(x_new)):
     print ("Patient {}".format(x_new[i]), predicted_classes[i] )
 ```
 
-### With HTTP requests, where the `service` object is not available 
+### With HTTP requests, which require getting the service endpoint in advance
 - Get the service endpoint
 ```python
 endpoint = service.scoring_uri
