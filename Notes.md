@@ -7,7 +7,7 @@
 - [06 - Work with Data](#06---work-with-data)
 - [07 - Work with Compute](#07---work-with-compute)
 - [08 - Create a Pipeline](#08---create-a-pipeline)
-- [09 - Create a Real-time Inferencing Service](#09---create-a-realtime-inferencing-service)
+- [09 - Create a Real-time Inferencing Service](#09---create-a-real-time-inferencing-service)
  
 # 01 - Get Started with Notebooks
 
@@ -170,6 +170,24 @@ script_config = ScriptRunConfig(source_directory=training_folder,
 experiment_name = 'mslearn-train-diabetes'
 experiment = Experiment(workspace=ws, name=experiment_name)
 run = experiment.submit(config=script_config)
+```
+## Two ways to register a trained model
+-- With a `run` object
+```python
+run.register_model(model_path='outputs/diabetes_model.pkl', model_name='diabetes_model',
+                   tags={'Training context':'Parameterized script'},
+                   properties={'AUC': run.get_metrics()['AUC'], 'Accuracy': run.get_metrics()['Accuracy']})
+```
+
+-- With the `Model` class
+```python
+from azureml.core import Model
+
+Model.register(workspace=run.experiment.workspace,
+               model_path = model_file,
+               model_name = 'diabetes_model',
+               tags={'Training context':'Pipeline'},
+               properties={'AUC': np.float(auc), 'Accuracy': np.float(acc)})
 ```
 
 # 06 - Work with Data
@@ -405,3 +423,98 @@ weekly_schedule = Schedule.create(ws, name="weekly-diabetes-training",
 ```
 
 # 09 - Create a Real-time Inferencing Service
+## Create a scoring/entry script 
+```python
+import json
+import joblib
+import numpy as np
+from azureml.core.model import Model
+
+# Called when the service is loaded
+def init():
+    global model
+    # Get the path to the deployed model file and load it
+    model_path = Model.get_model_path('diabetes_model')
+    model = joblib.load(model_path)
+
+# Called when a request is received
+def run(raw_data):
+    # Get the input data as a numpy array
+    data = np.array(json.loads(raw_data)['data'])
+    # Get a prediction from the model
+    predictions = model.predict(data)
+    # Get the corresponding classname for each prediction (0 or 1)
+    classnames = ['not-diabetic', 'diabetic']
+    predicted_classes = []
+    for prediction in predictions:
+        predicted_classes.append(classnames[prediction])
+    # Return the predictions as JSON
+    return json.dumps(predicted_classes)
+```
+
+## Create an ACI web service 
+```python
+from azureml.core.webservice import AciWebservice
+from azureml.core.model import InferenceConfig
+
+# Configure the scoring environment
+inference_config = InferenceConfig(runtime= "python",
+                                   entry_script=script_file,
+                                   conda_file=env_file)
+
+deployment_config = AciWebservice.deploy_configuration(cpu_cores = 1, memory_gb = 1)
+
+service_name = "diabetes-service"
+
+service = Model.deploy(ws, service_name, [model], inference_config, deployment_config)
+
+service.wait_for_deployment(True)
+```
+## Consume the web service
+### With Python SDK, where the `service` object is available 
+```python
+import json
+
+# This time our input is an array of two feature arrays
+x_new = [[2,180,74,24,21,23.9091702,1.488172308,22],
+         [0,148,58,11,179,39.19207553,0.160829008,45]]
+
+# Convert the array or arrays to a serializable list in a JSON document
+input_json = json.dumps({"data": x_new})
+
+# Call the web service, passing the input data
+predictions = service.run(input_data = input_json)
+
+# Get the predicted classes.
+predicted_classes = json.loads(predictions)
+   
+for i in range(len(x_new)):
+    print ("Patient {}".format(x_new[i]), predicted_classes[i] )
+```
+
+### With HTTP requests, where the `service` object is not available 
+- Get the service endpoint
+```python
+endpoint = service.scoring_uri
+```
+- Make a POST request
+```python
+import requests
+import json
+
+x_new = [[2,180,74,24,21,23.9091702,1.488172308,22],
+         [0,148,58,11,179,39.19207553,0.160829008,45]]
+
+# Convert the array to a serializable list in a JSON document
+input_json = json.dumps({"data": x_new})
+
+# Set the content type
+headers = { 'Content-Type':'application/json' }
+
+predictions = requests.post(endpoint, input_json, headers = headers)
+predicted_classes = json.loads(predictions.json())
+
+for i in range(len(x_new)):
+    print ("Patient {}".format(x_new[i]), predicted_classes[i] )
+```
+
