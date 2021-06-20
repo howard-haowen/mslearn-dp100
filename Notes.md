@@ -4,7 +4,7 @@
 - [03 - Get Designer Prediction](#03---get-designer-prediction)
 - [04 - Run Experiments](#04---run-experiments)
 - [05 - Train Models](#05---train-models)
-
+- [06 - Work with Data](#06---work-with-data)
 
 # 01 - Get Started with Notebooks
 
@@ -169,4 +169,80 @@ experiment = Experiment(workspace=ws, name=experiment_name)
 run = experiment.submit(config=script_config)
 ```
 
+# 06 - Work with Data
+## Create a tabular dataset
+```python
+from azureml.core import Dataset
+
+# Get the default datastore
+default_ds = ws.get_default_datastore()
+
+#Create a tabular dataset from the path on the datastore (this may take a short while)
+tab_data_set = Dataset.Tabular.from_delimited_files(path=(default_ds, 'diabetes-data/*.csv'))
+
+# Display the first 20 rows as a Pandas dataframe
+tab_data_set.take(20).to_pandas_dataframe()
+```
+
+## Train a model from a tabular dataset
+- In the training script
+```python
+parser.add_argument("--input-data", type=str, dest='training_dataset_id', help='training dataset')
+
+# `input_datasets['training_data']` comes from `diabetes_ds.as_named_input('training_data')]`
+diabetes = run.input_datasets['training_data'].to_pandas_dataframe()
+
+# Another way to create the `diabetes` dataframe object, which does not hard-code the dataset name into the script
+dataset = Dataset.get_by_id(ws, id=args.training_dataset_id)
+diabetes = dataset.to_pandas_dataframe()
+```
+- Pass the dataset as an argument to the training script
+```python
+# Get the training dataset
+diabetes_ds = ws.datasets.get("diabetes dataset")
+
+# Create a script config
+script_config = ScriptRunConfig(source_directory=experiment_folder,
+                              script='diabetes_training.py',
+                              arguments = ['--regularization', 0.1, # Regularizaton rate parameter
+                                           '--input-data', diabetes_ds.as_named_input('training_data')], # Reference to dataset
+                              environment=sklearn_env) 
+```
+
+## Create a file dataset
+```python
+#Create a file dataset from the path on the datastore (this may take a short while)
+file_data_set = Dataset.File.from_files(path=(default_ds, 'diabetes-data/*.csv'))
+
+# Get the files in the dataset
+for file_path in file_data_set.to_path():
+    print(file_path)
+```
+
+## Train a model from a file dataset
+- In the training script
+```python
+parser.add_argument('--input-data', type=str, dest='dataset_folder', help='data mount point')
+
+# Get the training data path from the input
+data_path = run.input_datasets['training_files'] 
+
+# Read the files
+all_files = glob.glob(data_path + "/*.csv")
+diabetes = pd.concat((pd.read_csv(f) for f in all_files), sort=False)
+
+# Another way to create the `data_path` path object, which does not hard-code the dataset name into the script
+data_path = args.dataset_folder
+```
+
+- Pass the dataset as an argument to the training script
+```python
+# Create a script config
+script_config = ScriptRunConfig(source_directory=experiment_folder,
+                                script='diabetes_training.py',
+                                arguments = ['--regularization', 0.1, # Regularizaton rate parameter
+                                             '--input-data', diabetes_ds.as_named_input('training_files').as_download()], # Reference to dataset location
+                                environment=sklearn_env) # Use the environment created previously
+```
+- Using `as_download` causes the files in the file dataset to be downloaded to a temporary location on the compute where the script is being run, while `as_mount` creates a mount point from which the files can be streamed directly from the datasetore.
 
