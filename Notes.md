@@ -851,7 +851,7 @@ S['Age'] = np.where(S.Age > 50, 'Over 50', '50 or younger')
 X_train, X_test, y_train, y_test, S_train, S_test = train_test_split(X, y, S, test_size=0.20, random_state=0, stratify=y)
 ```
 
-## Use `MetricFrame` from `fairlearn` to calculate the performance metrics by sensitive group
+## Use `MetricFrame` from `fairlearn` to calculate performance metrics by sensitive group
 ```python
 from fairlearn.metrics import selection_rate, MetricFrame
 from sklearn.metrics import accuracy_score, recall_score, precision_score
