@@ -12,7 +12,9 @@
 - [11 - Tune Hyperparameters](#11---tune-hyperparameters)
 - [12 - Use Automated Machine Learning](#12---use-automated-machine-learning)
 - [13 - Explore Differential Privacy](#13---explore-differential-privacy)
--   
+- [14 - Interpret Models](#14---interpret-models) 
+- [15 - Detect Unfairness](#15---detect-unfairness)
+
 # 01 - Get Started with Notebooks
 
 ## Easiest way to connect to a workspace
@@ -742,3 +744,128 @@ result_dp = private_reader.execute(query)
 # Query without differential privacy
 result = reader.execute(query)
 ```
+
+# 14 - Interpret Models
+## Create a SHAP model explainer 
+```python
+!pip show azureml-explain-model azureml-interpret
+
+from interpret.ext.blackbox import TabularExplainer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+# Separate features and labels
+features = ['Pregnancies','PlasmaGlucose','DiastolicBloodPressure','TricepsThickness','SerumInsulin','BMI','DiabetesPedigree','Age']
+labels = ['not-diabetic', 'diabetic']
+X, y = data[features].values, data['Diabetic'].values
+
+# Split data into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=0)
+
+model = DecisionTreeClassifier().fit(X_train, y_train)
+
+# "features" and "classes" fields are optional
+tab_explainer = TabularExplainer(model,
+                             X_train, 
+                             features=features, 
+                             classes=labels)
+```
+
+## Get *global* feature importance
+```python
+# you can use the training data or the test data here
+global_tab_explanation = tab_explainer.explain_global(X_train)
+
+# Get the top features by importance
+global_tab_feature_importance = global_tab_explanation.get_feature_importance_dict()
+for feature, importance in global_tab_feature_importance.items():
+    print(feature,":", importance)
+```
+
+## Get *local* feature importance
+```python
+# Get the observations we want to explain (the first two)
+X_explain = X_test[0:2]
+
+# Get predictions
+predictions = model.predict(X_explain)
+
+# Get local explanations
+local_tab_explanation = tab_explainer.explain_local(X_explain)
+
+# Get feature names and importance for each possible label
+local_tab_features = local_tab_explanation.get_ranked_local_names()
+local_tab_importance = local_tab_explanation.get_ranked_local_values()
+```
+
+## Upload a model explanation to the experiment output in a training script
+```python
+# Import libraries for model explanation
+from azureml.interpret import ExplanationClient
+from interpret.ext.blackbox import TabularExplainer
+
+# Get the experiment run context
+run = Run.get_context()
+
+# Get explanation
+explainer = TabularExplainer(model, X_train, features=features, classes=labels)
+explanation = explainer.explain_global(X_test)
+
+# Get an Explanation Client and upload the explanation
+explain_client = ExplanationClient.from_run(run)
+explain_client.upload_model_explanation(explanation, comment='Tabular Explanation')
+
+# Complete the run
+run.complete()
+```
+
+## Download a model explanation from a `run` object
+```python
+from azureml.interpret import ExplanationClient
+
+# Get the feature explanations
+client = ExplanationClient.from_run(run)
+engineered_explanations = client.download_model_explanation()
+feature_importances = engineered_explanations.get_feature_importance_dict()
+
+# Overall feature importance
+print('Feature\tImportance')
+for key, value in feature_importances.items():
+    print(key, '\t', value)    
+```
+
+# 15 - Detect Unfairness
+## Determine a sensitive feature (e.g. age)
+```python
+# Separate features and labels
+features = ['Pregnancies','PlasmaGlucose','DiastolicBloodPressure','TricepsThickness','SerumInsulin','BMI','DiabetesPedigree','Age']
+X, y = data[features].values, data['Diabetic'].values
+
+# Get sensitive features
+S = data[['Age']].astype(int)
+# Change value to represent age groups
+S['Age'] = np.where(S.Age > 50, 'Over 50', '50 or younger')
+# numpy.where(condition[, x, y]) returns `x` when the condition is `True` and `y` when `False`
+
+# Split data into training set and test set
+X_train, X_test, y_train, y_test, S_train, S_test = train_test_split(X, y, S, test_size=0.20, random_state=0, stratify=y)
+```
+
+## Use `MetricFrame` from `fairlearn` to calculate the performance metrics by sensitive group
+```python
+from fairlearn.metrics import selection_rate, MetricFrame
+from sklearn.metrics import accuracy_score, recall_score, precision_score
+
+# Get metrics by sensitive group from fairlearn
+metrics = {'selection_rate': selection_rate, #i.e. percentage of positive predictions
+           'accuracy': accuracy_score,
+           'recall': recall_score,
+           'precision': precision_score}
+
+group_metrics = MetricFrame(metrics,
+                            y_test, y_hat,
+                            sensitive_features=S_test['Age'])
+
+print(group_metrics.by_group)
+```
+
