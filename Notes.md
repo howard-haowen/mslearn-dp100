@@ -14,6 +14,8 @@
 - [13 - Explore Differential Privacy](#13---explore-differential-privacy)
 - [14 - Interpret Models](#14---interpret-models) 
 - [15 - Detect Unfairness](#15---detect-unfairness)
+- [16 - Monitor a Model](#16---monitor-a-model)
+- [17 - Monitor Data Drift](#17---monitor-data-drift)
 
 # 01 - Get Started with Notebooks
 
@@ -869,3 +871,157 @@ group_metrics = MetricFrame(metrics,
 print(group_metrics.by_group)
 ```
 
+## View the model in Fairlearn's fairness dashboard
+```python
+from raiwidgets import FairnessDashboard
+
+# View this model in Fairlearn's fairness dashboard, and see the disparities which appear:
+FairnessDashboard(sensitive_features=S_test,
+                   y_true=y_test,
+                   y_pred={"diabetes_model": diabetes_model.predict(X_test)})
+```
+
+## Use `GridSearch` to mitigate unfairness in the model
+- Create mitigated models
+```python
+from fairlearn.reductions import GridSearch, EqualizedOdds
+
+# Train multiple models
+sweep = GridSearch(DecisionTreeClassifier(),
+                   constraints=EqualizedOdds(),
+                   grid_size=20)
+
+# grid_size (int) – The number of Lagrange multipliers to generate in the grid
+
+sweep.fit(X_train, y_train, sensitive_features=S_train.Age)
+models = sweep.predictors_
+```
+
+- Compare them with the unmitigated model
+```python
+# the unmitigated model
+predictions = {model_name: diabetes_model.predict(X_test)} 
+
+# adding all mitigated models to the `predictions` dictionary
+i = 0
+for model in models:
+    i += 1
+    model_name = 'diabetes_mitigated_{0}'.format(i)
+    predictions[model_name] = model.predict(X_test)
+```
+
+- Compare the models using `FairnessDashboard`
+```python
+FairnessDashboard(sensitive_features=S_test,
+                   y_true=y_test,
+                   y_pred=predictions)
+```
+
+# 16 - Monitor a Model
+## Deploy an inference service with `AciWebservice`
+```python
+from azureml.core.webservice import AciWebservice, Webservice
+from azureml.core.model import Model
+from azureml.core.model import InferenceConfig
+
+# Configure the scoring environment
+inference_config = InferenceConfig(runtime= "python",
+                                   entry_script=script_file,
+                                   conda_file=env_file)
+
+service_name = "diabetes-service-app-insights"
+deployment_config = AciWebservice.deploy_configuration(cpu_cores = 1, memory_gb = 1)
+aci_service = Model.deploy(workspace=ws,
+                           name= service_name,
+                           models= [model],
+                           inference_config= inference_config,
+                           deployment_config=deployment_config)
+aci_service.wait_for_deployment(show_output = True)
+print(aci_service.state)
+
+# When the state is `Healthy`, the service is in good shape.
+```
+
+## Enable Application InSights to monitor the service 
+```python
+# Enable AppInsights
+aci_service.update(enable_app_insights=True)
+```
+
+## View the logging data in Azure Portal
+- Overview > Application Insights > Logs > New Query 1 > Run
+```
+traces
+ |where  message == "STDOUT"
+   and customDimensions.["Service Name"] == "diabetes-service-app-insights"
+ |project timestamp, customDimensions.Content
+```
+
+# 17 - Monitor Data Drift
+
+## Create a *baseline* dataset
+```python
+baseline_data_set = Dataset.Tabular.from_delimited_files(path=(default_ds, 'diabetes-baseline/*.csv'))
+baseline_data_set = baseline_data_set.register(workspace=ws, 
+                           name='diabetes baseline',
+                           description='diabetes baseline data',
+                           tags = {'format':'CSV'},
+                           create_new_version=True)
+```
+
+## Create a *target* dataset
+```python
+# Use the folder partition format to define a dataset with a 'date' timestamp column
+partition_format = path_on_datastore + '/diabetes_{date:yyyy-MM-dd}.csv'
+target_data_set = Dataset.Tabular.from_delimited_files(path=(default_ds, path_on_datastore + '/*.csv'),
+                                                       partition_format=partition_format)
+
+# Register the target dataset
+target_data_set = target_data_set.with_timestamp_columns('date').register(workspace=ws,
+                                                                          name='diabetes target',
+                                                                          description='diabetes target data',
+                                                                          tags = {'format':'CSV'},
+                                                                          create_new_version=True)
+
+```
+- To compare this new data to the baseline data, you must define a target dataset that includes the features you want to analyze for data drift as well as a timestamp field that indicates the point in time when the new data was current -this enables you to measure data drift over temporal intervals.
+- The timestamp can either be a field in the dataset itself, or derived from the folder and filename pattern used to store the data. Notice `with_timestamp_columns('date')`. 
+
+## Define the data drift monitor with `DataDriftDetector`
+```python
+from azureml.datadrift import DataDriftDetector, AlertConfiguration
+
+# set up feature list
+features = ['Pregnancies', 'Age', 'BMI']
+
+# set up alert config
+alert_config = AlertConfiguration(['user@contoso.com']) 
+# replace with your email to recieve alerts from the scheduled pipeline after enabling
+
+# set up data drift detector
+monitor = DataDriftDetector.create_from_datasets(ws, 'mslearn-diabates-drift', baseline_data_set, target_data_set,
+                                                      compute_target=cluster_name, 
+                                                      frequency='Week', 
+                                                      feature_list=features, # list of features to detect drift on
+                                                      drift_threshold=.3, # threshold from 0 to 1 for email alerting
+                                                      latency=24, # SLA in hours for target data to arrive in the dataset
+                                                      alert_config=alert_config)  # email addresses to send alert
+```
+
+## Backfill the data drift monintor 
+```python
+from azureml.widgets import RunDetails
+
+backfill = monitor.backfill(dt.datetime.now() - dt.timedelta(weeks=6), dt.datetime.now())
+RunDetails(backfill).show()
+backfill.wait_for_completion()
+```
+
+## View drift metrics
+```python
+drift_metrics = backfill.get_metrics()
+for metric in drift_metrics:
+    print(metric, drift_metrics[metric])
+```
+- You can also visualize the data drift metrics in Azure Machine Learning studio.
+- Datasets > Dataset monitors > Drift overview > Feature detail 
