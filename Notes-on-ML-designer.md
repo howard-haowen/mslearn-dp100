@@ -17,10 +17,16 @@
 - The module returns two outputs: **Cleaned dataset** and **Cleaning transformation**.
 
 ### Clip Values 
-- **Set of thresholds**
+1. Select **set of thresholds**
   - **ClipPeaks**: When you clip values by peaks, you specify only an upper boundary. Values greater than that boundary value are replaced. >>> *Lower threshold*
-  - **ClipSubpeaks**: When you clip values by subpeaks, you specify only a lower boundary. Values that are less than that boundary value are replaced.
-  - **ClipPeaksAndSubpeaks**: When you clip values by peaks and subpeaks, you can specify both the upper and lower boundaries. Values that are outside that range are replaced. Values that match the boundary values are not changed.
+  - **ClipSubpeaks**: When you clip values by subpeaks, you specify only a lower boundary. Values that are less than that boundary value are replaced. >>> *Upper threshold*
+  - **ClipPeaksAndSubpeaks**: When you clip values by peaks and subpeaks, you can specify both the upper and lower boundaries. Values that are outside that range are replaced. Values that match the boundary values are not changed. >>> *Threshold*
+
+2. For each threshold type, choose either of the two
+- **Constant**
+- **Percentile**: For example, assume you want to keep only the values in the 10-80 percentile range, and replace all others. You would choose Percentile, and then type 10 for Percentile value for lower threshold, and type 80 for Percentile value for upper threshold.
+
+3. Define a substitute value
 
 ### Edit Metadata 
 ### Group Data into Bins 
