@@ -44,7 +44,7 @@
 - **Quantiles**: The quantile method assigns values to bins based on percentile ranks. This method is also known as equal height binning.
 - **Equal Width**: With this option, you must specify the total number of bins. The values from the data column are placed in the bins such that each bin has the same interval between starting and ending values. As a result, some bins might have more values if data is clumped around a certain point.
 - **Custom Edges**: You can specify the values that begin each bin. *The edge value is always the lower boundary of the bin*.
-![binning](https://www.google.com/url?sa=i&url=https%3A%2F%2Fwingpage.net%2Fcontent%2FExam%2FCOMPS382%2520Exam.html&psig=AOvVaw2T0TRM-xEJCAnlqv-dB66G&ust=1624547284247000&source=images&cd=vfe&ved=0CAoQjRxqFwoTCOCYtruErvECFQAAAAAdAAAAABAD)
+![binning](https://image.slidesharecdn.com/datapre-processing-170313100854-170315122804/95/data-pre-processing-12-638.jpg?cb=1489580903)
 
 2. 
 
