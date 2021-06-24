@@ -1,3 +1,4 @@
+The info in this note is taken straight from [Microsoft](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/module-reference)
 
 # Data preparation modules
 ## Data Input and Output
@@ -67,13 +68,56 @@ For each of the rows in either table that have no matching rows in the other, th
 - **MinMax**: The min-max normalizer linearly rescales every feature to the [0,1] interval.
 ![min-max](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-minmax.png)
 - **Logistic**
-
+![logistic](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-logistic.png)
 - **LogNormal**
+![lognormal](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-lognormal.png)
 - **TanH**: All values are converted to a hyperbolic tangent.
+![tanh](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-tanh.png)
 
-Partition and Sample 
-Remove Duplicate Rows 
-SMOTE 
-Select Columns Transform 
-Select Columns in Dataset 
-Split Data
+### Partition and Sample 
+- **Head**: Use this mode to get only the first n rows. 
+- **Sampling**: This option supports simple random sampling or stratified random sampling.
+  - **Rate of sampling**: Enter a value between 0 and 1.   
+  - **Random seed for sampling**: The default value is *0, meaning that a starting seed is generated based on the system clock*. This value can lead to slightly different results each time you run the pipeline.
+  - **Stratified split for sampling**: Select this option if it's important that the rows in the dataset are divided evenly by some key column before sampling.
+- **Assign to Folds**: Use this option when you want to divide the dataset into subsets of the data. This option is also useful when you want to create a custom number of folds for cross-validation, or to split rows into several groups. 
+- **Pick fold**: Use this option when you have divided a dataset into multiple partitions and now want to load each partition in turn for further analysis or processing. *Partition indices are 1-based*. For example, if you divided the dataset into three parts, the partitions would have the indices 1, 2, and 3.
+![assign-to-folds](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/partition-and-sample.png)
+
+### Split Data
+- Use the Split Data module to divide a dataset into two distinct sets.
+- This module is useful when you need to separate data into training and testing sets. 
+- Splitting modes
+  - Split Rows: Use this option if you just want to divide the data into two parts. You can specify the percentage of data to put in each split. By default, the data is divided 50/50.
+  - Regular Expression Split: Choose this option when you want to divide your dataset by testing a single column for a value.
+  ```python
+   \"Text" Gryphon 
+  # This example puts into the first dataset all rows that contain the text Gryphon in the column Text. It puts other rows into the second output of Split Data.
+  ```
+  - Relative Expression Split: Use this option whenever you want to apply a condition to a number column.
+  ```python
+  \"Year" > 2010
+  # A common scenario is to divide a dataset by years. The following expression selects all rows where the values in the column Year are greater than 2010.
+  ```
+  
+### SMOTE
+- Synthetic Minority Oversampling Technique (SMOTE) is a statistical technique for increasing the number of cases in your dataset in a balanced way.
+- The module works by generating new instances from existing **minority** cases that you supply as input. 
+- This implementation of SMOTE does not change the number of **majority** cases.
+- To increase the number of cases, you can set the value of **SMOTE percentage**, by using multiples of 100. For example, suppose you have an imbalanced dataset where just 1 percent of the cases have the target value A (the minority class), and 99 percent of the cases have the value B. To increase the percentage of minority cases to twice the previous percentage, you would enter 200 for SMOTE percentage.
+- Use the **Number of nearest neighbors** option to determine the size of the feature space that the SMOTE algorithm uses in building new cases.
+  - By increasing the number of nearest neighbors, you get features from more cases.
+  - By keeping the number of nearest neighbors low, you use features that are more like those in the original sample. 
+
+### Select Columns Transform 
+- The purpose of the Select Columns Transform module is to ensure that a predictable, consistent set of columns is used in downstream machine learning operations.
+- This module is helpful for tasks such as scoring, which require specific columns.
+- Steps for using Select Columns Transform 
+  - Add an input dataset to your pipeline in the designer.
+  - Add an instance of **Filter Based Feature Selection**.
+  - Connect the modules and configure the feature selection module to automatically find a number of best features in the input dataset.
+  - Add an instance of **Train Model** and use the output of Filter Based Feature Selection as the input for training.
+  - Attach an instance of the **Select Columns Transform module**.
+  - Add the **Score Model** module.
+  - Add the **Apply Transformation** module, and connect the output of the feature selection transformation.
+![designer](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/filter-based-feature-selection-score.png)
