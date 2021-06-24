@@ -1,6 +1,7 @@
 The info in this note is taken straight from [Microsoft](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/module-reference)
 
 # Data preparation modules
+
 ## Data Input and Output
 - move data from cloud sources into your pipeline
 - write your results or intermediate data to Azure Storage, SQL Database, or Hive
@@ -126,3 +127,80 @@ For each of the rows in either table that have no matching rows in the other, th
   - Add the **Score Model** module.
   - Add the **Apply Transformation** module, and connect the output of the feature selection transformation.
 ![designer](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/filter-based-feature-selection-score.png)
+
+## Feature Selection
+### Filter Based Feature Selection
+- The Filter Based Feature Selection module provides multiple feature selection algorithms to choose from. The module includes correlation methods such as Pearson correlation and chi-squared values.
+- You provide a dataset and identify the column that contains the label or dependent variable. You then specify a single method to use in measuring feature importance.
+- The module outputs a dataset that contains the best feature columns, as ranked by predictive power. It also outputs the names of the features and their scores from the selected metric.
+
+#### Pearson correlation
+- Requirements: Label can be text or numeric. **Features must be numeric**.
+- Pearson’s correlation statistic, or Pearson’s correlation coefficient, is also known in statistical models as the r value. 
+- For any two variables, it returns a value that indicates the strength of the correlation.
+- Pearson's correlation coefficient is computed by *taking the covariance of two variables and dividing by the product of their standard deviations*. 
+- Changes of scale in the two variables don't affect the coefficient.
+
+![pearson](https://getcalc.com/formula/statistics/correlation-coefficient.png)
+
+#### Chi squared
+- Requirements: Labels and features can be text or numeric. Use this method for computing **feature importance for two categorical columns**.
+- The two-way chi-squared test is a statistical method that measures how close expected values are to actual results. 
+- The method assumes that variables are random and drawn from an adequate sample of independent variables. 
+- The resulting chi-squared statistic indicates how far results are from the expected (random) result.
+
+![chi-square](https://getcalc.com/formula/statistics/chi-squared-test.png)
+
+### Permutation Feature Importance
+- Feature values are randomly shuffled, one column at a time. 
+- The performance of the model is measured before and after. You can choose one of the standard metrics to measure performance.
+- The scores that the module returns represent the change in the performance of a trained model, after permutation. 
+- For **Metric for measuring performance**, select a single metric to use when you're computing model quality after permutation.
+  - Classification: Accuracy, Precision, Recall
+  - Regression: **Precision, Recall**, Mean Absolute Error, Root Mean Squared Error, Relative Absolute Error, Relative Squared Error, Coefficient of Determination 
+
+## Statistical Functions
+### Summarize Data
+- Use the Summarize Data module to create a set of standard statistical measures that describe each column in the input table.
+
+# Machine learning algorithms
+## Regression
+### Boosted Decision Tree Regression
+### Decision Forest Regression
+### Fast Forest Quantile Regression
+### Linear Regression
+### Neural Network Regression
+- Any class of statistical models can be termed a neural network if they use adaptive weights and can approximate non-linear functions of their inputs.
+- If you accept the default neural network architecture, use the Properties pane to set parameters that control the behavior of the neural network, such as the **number of nodes in the hidden layer, learning rate, and normalization**.
+
+### Poisson Regression
+- Poisson regression is intended for predicting numeric values, typically counts.
+- Counts cannot be negative. The method will fail outright if you attempt to use it with negative labels.
+- A Poisson distribution is a discrete distribution; therefore, it is not meaningful to use this method with non-whole numbers.
+
+#### Optimization tolerance
+- Type a value that defines the tolerance interval during optimization. **The lower the value, the slower and more accurate the fitting**.
+
+#### Regularization
+- Regularization adds constraints to the algorithm regarding aspects of the model that are independent of the training data. Regularization is commonly used to avoid overfitting.
+  - **L1 regularization** is useful if the goal is to have **a model that is as sparse as possible**. L1 regularization is done by subtracting the L1 weight of the weight vector from the loss expression that the learner is trying to minimize. The L1 norm is a good approximation to the L0 norm, which is the number of non-zero coordinates.
+  - **L2 regularization** prevents any single coordinate in the weight vector from growing too much in magnitude. L2 regularization is useful if the goal is to have **a model with small overall weights**. 
+  
+![regularization](http://laid.delanover.com/wp-content/uploads/2018/01/regularization.png)
+
+## Classification
+### Multiclass Boosted Decision Tree
+### Multiclass Decision Forest
+### Multiclass Logistic Regression
+### Multiclass Neural Network
+### One vs. All Multiclass
+### One vs. One Multiclass
+### Two-Class Averaged Perceptron
+### Two-Class Boosted Decision Tree
+### Two-Class Decision Forest
+### Two-Class Logistic Regression
+### Two-Class Neural Network
+### Two Class Support Vector Machine
+
+## Clustering
+### K-Means Clustering
