@@ -1,4 +1,4 @@
-The info in this note is taken straight from [Microsoft](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/module-reference)
+The info in this note is taken straight from [Microsoft Documentation](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/module-reference).
 
 # Data preparation modules
 
