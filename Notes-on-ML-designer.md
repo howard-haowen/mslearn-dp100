@@ -186,7 +186,7 @@ For each of the rows in either table that have no matching rows in the other, th
   - **L1 regularization** is useful if the goal is to have **a model that is as sparse as possible**. L1 regularization is done by subtracting the L1 weight of the weight vector from the loss expression that the learner is trying to minimize. The L1 norm is a good approximation to the L0 norm, which is the number of non-zero coordinates.
   - **L2 regularization** prevents any single coordinate in the weight vector from growing too much in magnitude. L2 regularization is useful if the goal is to have **a model with small overall weights**. 
   
-![regularization](http://laid.delanover.com/wp-content/uploads/2018/01/regularization.png)
+![regularization](https://images2.programmersought.com/293/c1/c1a9b8d5574d08161922d10a5547832d.png)
 
 ## Classification
 ### Multiclass Boosted Decision Tree
@@ -194,13 +194,86 @@ For each of the rows in either table that have no matching rows in the other, th
 ### Multiclass Logistic Regression
 ### Multiclass Neural Network
 ### One vs. All Multiclass
+- This module creates an ensemble of binary classification models to analyze multiple classes. 
+- To use this module, **you need to configure and train a binary classification model first**.
+
 ### One vs. One Multiclass
+- This module is useful for creating models that predict three or more possible outcomes, when the outcome depends on continuous or categorical predictor variables.
+- This module implements the one-versus-one method, in which a binary model is created per class pair. At prediction time, the class which received the most votes is selected.
+- In essence, the module creates an ensemble of individual models and then merges the results, to create a single model that predicts all classes.
+
 ### Two-Class Averaged Perceptron
 ### Two-Class Boosted Decision Tree
 ### Two-Class Decision Forest
 ### Two-Class Logistic Regression
 ### Two-Class Neural Network
 ### Two Class Support Vector Machine
+- This particular implementation is suited to prediction of two possible outcomes, based on either continuous or categorical variables.
+- SVM models have been used in many applications, from information retrieval to text and image classification. 
+- SVMs can be used for both classification and regression tasks.
 
 ## Clustering
 ### K-Means Clustering
+- When you configure a clustering model by using the K-means method, you must specify a target number k that indicates the number of *centroids* you want in the model. 
+- The centroid is a point that's representative of each cluster. 
+- The K-means algorithm assigns each incoming data point to one of the clusters by minimizing the within-cluster *sum of squares*.
+
+#### Number of centroids
+- type the number of clusters you want the algorithm to begin with.
+#### Initialization
+- **First N**: Some initial number of data points are chosen from the dataset and used as the initial means. This method is also called the **Forgy method**.
+- **Random**: The algorithm randomly places a data point in a cluster and then computes the initial mean to be the centroid of the cluster's randomly assigned points. This method is also called the **random partition method**.
+- K-Means++: This is the default method for initializing clusters. The K-means++ algorithm was proposed in 2007 by David Arthur and Sergei Vassilvitskii to avoid poor clustering by the standard K-means algorithm. **K-means++ improves upon standard K-means by using a different method for choosing the initial cluster centers**.
+#### Assign label mode
+- **Ignore label column**: The values in the label column are ignored and are not used in building the model.
+- **Fill missing values**: The label column values are used as features to help build the clusters. If any rows are missing a label, the value is imputed by using other features.
+- **Overwrite from closest to center**: The label column values are replaced with predicted label values, using the label of the point that is closest to the current centroid.
+#### Normalize features
+- If you apply normalization, before training, the data points are normalized to [0,1] by MinMaxNormalizer.
+
+# Modules for building and evaluating models
+## Model Training
+### Train Model
+#### Classification models
+- based on neural networks, decision trees, and decision forests, and other algorithms.
+#### Regression models
+- can include standard linear regression, or use other algorithms, including neural networks and Bayesian regression.
+
+### Train Clustering Model
+### Train PyTorch Model
+1. Add **DenseNet module** or **ResNet** to your pipeline draft in the designer.
+2. Add the Train PyTorch Model module to the pipeline.
+3. On the left input, attach an untrained model. Attach the training dataset and validation dataset to the middle and right-hand input of Train PyTorch Model.
+- For dataset, **the training dataset must be a labeled image directory**. Refer to **Convert to Image Directory** for how to get a labeled image directory.
+- For **Patience**, specify how many epochs to early stop training if validation loss does not decrease consecutively. by default 3.
+- For **Print frequency**, specify training log print frequency over iterations in each epoch, by default 10.
+### Tune Model Hyperparameters
+- In the right panel of Tune Model Hyperparameters, choose a value for **Parameter sweeping mode**. This option controls how the parameters are selected.
+  - Entire grid
+  - Random sweep
+
+- When you run a parameter sweep, **the module calculates all applicable metrics for the model type** and returns them in the Sweep results report. The module uses separate metrics for regression and classification models.
+- However, the metric that you choose determines how the models are ranked. **Only the top model, as ranked by the chosen metric, is output as a trained model to use for scoring**.
+
+#### Metrics used for binary classification
+- Accuracy is the proportion of true results to total cases.
+- Precision is the proportion of true results to positive results.
+- Recall is the fraction of all correct results over all results.
+- F-score is a measure that balances precision and recall.
+- AUC is a value that represents the area under the curve when false positives are plotted on the x-axis and true positives are plotted on the y-axis.
+- Average Log Loss is the difference between two probability distributions: the true one, and the one in the model.
+
+#### Metrics used for regression
+- Mean absolute error averages all the errors in the model, where error means the distance of the predicted value from the true value. It's often abbreviated as MAE.
+- Root of mean squared error measures the average of the squares of the errors, and then takes the root of that value. It's often abbreviated as RMSE.
+- Relative absolute error represents the *error as a percentage of the true value*.
+- Relative squared error normalizes the total squared error by dividing by the total squared error of the predicted values.
+- **Coefficient of determination** is a single number that indicates how well data fits a model. A value of one means that the model exactly matches the data. A value of zero means that the data is random or otherwise can't be fit to the model. It's often called **r2, R2, or r-squared**.
+
+## Model Scoring and Evaluation
+
+## Python Language
+## Text Analytics
+## Computer Vision
+## Recommendation
+## Anomaly Detection
