@@ -64,14 +64,19 @@ For each of the rows in either table that have no matching rows in the other, th
 
 ### Normalize Data 
 - **Zscore**
+
 ![zscore](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-z-score.png)
 - **MinMax**: The min-max normalizer linearly rescales every feature to the [0,1] interval.
+
 ![min-max](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-minmax.png)
 - **Logistic**
+
 ![logistic](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-logistic.png)
 - **LogNormal**
+
 ![lognormal](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-lognormal.png)
 - **TanH**: All values are converted to a hyperbolic tangent.
+
 ![tanh](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/aml-normalization-tanh.png)
 
 ### Partition and Sample 
