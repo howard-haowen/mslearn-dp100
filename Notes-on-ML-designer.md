@@ -372,6 +372,61 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
 
 ![](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/extract-n-gram-training-pipeline-score-model.png)
 
+### Feature Hashing 
+- Use the Feature Hashing module to transform a stream of English text into a set of integer features. You can then pass this hashed feature set to a machine learning algorithm to train a text analytics model.
+- The feature hashing functionality provided in this module is based on the **nimbusml framework**.
+- Feature hashing works by converting unique tokens into integers. It operates on the exact strings that you provide as input and does not perform any linguistic analysis or preprocessing.
+- Feature hashing lets you represent text documents of variable length as numeric feature vectors of equal length to reduce dimensionality.
+
+### Latent Dirichlet Allocation
+- Latent Dirichlet Allocation (LDA) is often used in natural language processing to find texts that are similar. Another common term is topic modeling.
+- You can use the probabilistic model to classify either existing training cases or new cases that you provide to the model as input.
+- To LDA, the topic itself is just a probability distribution over time for a set of words.
+
+### Train Vowpal Wabbit Model
+- Vowpal Wabbit (VW) is a fast, parallel machine learning framework that was developed for distributed computing by Yahoo! Research. 
+- Features of Vowpal Wabbit that are important for machine learning include continuous learning (online learning), dimensionality reduction, and interactive learning. 
+- Vowpal Wabbit is also a solution for problems when you cannot fit the model data into memory.
+- The primary users of Vowpal Wabbit are data scientists who have previously used the framework for machine learning tasks such as **classification, regression, topic modeling or matrix factorization**.
+- To train a model using this module, the input dataset must consist of a single text column in one of the two supported formats: **SVMLight or VW**. 
+- This doesn't mean that Vowpal Wabbit analyzes only text data, only that the features and values must be prepared in the required text file format.
+- Vowpal Wabbit converts all data to hashes, not just text data but other categorical variables. 
+- Vowpal Wabbit provides extremely fast learning over non-linear features like n-grams.
+- Vowpal Wabbit uses online learning techniques such as stochastic gradient descent (SGD) to fit a model one record at a time. Thus it iterates very quickly over raw data and can develop a good predictor faster than most other models.
+
 ## Computer Vision
+### ResNet (Residual Neural Network)
+- This classification algorithm is a supervised learning method, and requires a labeled dataset.
+- This module does not support labeled dataset generated from Data Labeling in the studio, but only support labeled image directory generated from **Convert to Image Directory** module.
+### DenseNet (Densely Connected Convolutional Networks)
+- This classification algorithm is a supervised learning method, and requires a labeled dataset.
+- This module does not support labeled dataset generated from Data Labeling in the studio, but only support labeled image directory generated from **Convert to Image Directory** module.
+
 ## Recommendation
+### Train SVD Recommender
+- The Train SVD Recommender module reads a dataset of user-item-rating triples. It returns a trained SVD recommender. 
+- The main aim of a recommendation system is to recommend one or more items to users of the system. Examples of an item might be a movie, restaurant, book, or song. 
+- A user might be a person, a group of persons, or another entity with item preferences.
+#### Number of factors
+- Each factor measures how much the user is relating with the item. The number of factors is also the dimensionality of latent factor space. With the number of users and items increasing, it's better to set a larger number of factors. But if the number is too large, performance might drop.
+#### Number of recommendation algorithm iterations 
+- The number indicates how many times the algorithm should process the input data. The higher this number is, the more accurate the predictions are. However, a higher number means slower training. The default value is 30.
+#### Learning rate
+- The learning rate determines the size of the step at each iteration. If the step size is too large, you might overshoot the optimal solution. If the step size is too small, training takes longer to find the best solution. Enter a number between 0.0 and 2.0 that defines the step size for learning.
+
+### Train Wide & Deep Recommender
+- The Train Wide & Deep Recommender module reads a dataset of user-item-rating triples and, optionally, some user and item features.
+- A training data set of user-item-rating triples is required, but you can also include user features and item features (if available), in separate datasets.
+- The Wide & Deep jointly trains **wide linear models and deep neural networks** to combine the strengths of memorization and generalization.
+- The **wide component** accepts a set of raw features and feature transformations to memorize feature interactions. 
+- The wide component takes user embeddings, item embeddings, and the cross-product transformation of user IDs and item IDs as input. 
+- And with less feature engineering, the **deep component** generalizes to unseen feature combinations through low-dimensional dense feature embeddings.
+- Together with other numeric feature vectors, these vectors are then fed into the deep feed-forward neural network. 
+- The wide part and deep part are combined by summing up their final output log odds as the prediction, which finally goes to one common loss function for joint training.
+
 ## Anomaly Detection
+### PCA-Based Anomaly Detection
+- This module helps you build a model in scenarios where it's easy to get training data from one class, such as valid transactions, but difficult to get sufficient samples of the targeted anomalies.
+- The PCA-Based Anomaly Detection module solves the problem by analyzing available features to determine what constitutes a "normal" class. 
+- The module then applies distance metrics to identify cases that represent anomalies. 
+- This approach lets you train a model by using existing imbalanced data.
