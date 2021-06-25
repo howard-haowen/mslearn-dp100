@@ -357,6 +357,20 @@ def azureml_main(dataframe1 = None, dataframe2 = None):
 - Among various word embedding technologies, in this module, we implemented three widely used methods. Two, **Word2Vec** and **FastText**, are *online-training models*. The other is a *pretrained* model, **glove-wiki-gigaword-100**.
 
 ### Extract N-Gram Features from Text
+#### Create a new n-gram dictionary
+- **Weighting function** specifies how to build the document feature vector and how to extract vocabulary from documents.
+  - **Binary Weight**: Assigns a binary presence value to the extracted n-grams. The value for each n-gram is 1 when it exists in the document, and 0 otherwise.
+  - **TF Weight**: Assigns a term frequency (TF) score to the extracted n-grams. The value for each n-gram is its occurrence frequency in the document.
+  - **IDF Weight**: Assigns an inverse document frequency (IDF) score to the extracted n-grams. The value for each n-gram is the log of corpus size divided by its occurrence frequency in the whole corpus.
+
+> IDF = log of corpus_size / document_frequency
+
+  - **TF-IDF Weight**: Assigns a term frequency/inverse document frequency (TF/IDF) score to the extracted n-grams. The value for each n-gram is its TF score multiplied by its IDF score.
+
+#### Use an existing n-gram dictionary
+#### Build inference pipeline that uses n-grams to deploy a real-time endpoint
+
+![](https://docs.microsoft.com/en-us/azure/machine-learning/algorithm-module-reference/media/module/extract-n-gram-training-pipeline-score-model.png)
 
 ## Computer Vision
 ## Recommendation
